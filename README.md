@@ -57,7 +57,7 @@ After deploying, embed the chat page in an iframe:
 ```html
 <iframe
   src="https://your-site.netlify.app"
-  title="Chat Assistant"
+  title="Retail Pulse AI"
   style="width: 360px; height: 600px; border: none; border-radius: 12px;"
 ></iframe>
 ```

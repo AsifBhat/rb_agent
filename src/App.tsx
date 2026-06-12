@@ -4,8 +4,7 @@ export default function App() {
   return (
     <div className="page">
       <header className="header">
-        <h1>Chat Assistant</h1>
-        <p>Powered by your OpenAI Agent Builder workflow.</p>
+        <h1>Retail Pulse AI</h1>
       </header>
       <ChatWidget />
     </div>
