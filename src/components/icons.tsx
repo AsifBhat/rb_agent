@@ -94,3 +94,16 @@ export function ArrowLeftIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function ArrowUpIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

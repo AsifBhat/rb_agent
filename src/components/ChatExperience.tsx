@@ -22,21 +22,21 @@ export function ChatExperience({ initialQuery, onBack }: ChatExperienceProps) {
       colorScheme: "light",
       color: {
         accent: {
-          primary: "#2563eb",
+          primary: "#0082C5",
           level: 2,
         },
       },
       radius: "round",
       density: "normal",
       typography: {
-        fontFamily: "'Inter', system-ui, sans-serif",
+        fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
       },
     },
     composer: {
-      placeholder: "Ask a follow-up question...",
+      placeholder: "Ask a follow-up...",
     },
     startScreen: {
-      greeting: "Retail Pulse AI is ready.",
+      greeting: "",
       prompts: [],
     },
     header: {
@@ -52,21 +52,20 @@ export function ChatExperience({ initialQuery, onBack }: ChatExperienceProps) {
   }, [initialQuery, sendUserMessage]);
 
   return (
-    <div className="chat-page">
-      <header className="chat-page__header">
-        <button type="button" className="back-button" onClick={onBack}>
+    <div className="chat-shell">
+      <header className="chat-shell__header">
+        <button type="button" className="chat-shell__back" onClick={onBack}>
           <ArrowLeftIcon />
-          New question
+          Back
         </button>
-        <div className="chat-page__brand">
-          <span className="chat-page__dot" aria-hidden />
+        <div className="nav__brand nav__brand--compact">
+          <span className="nav__mark" aria-hidden />
           Retail Pulse AI
         </div>
-        <div className="chat-page__spacer" />
       </header>
 
-      <div className="chat-page__body">
-        <ChatKit control={control} className="chat-page__panel" />
+      <div className="chat-shell__main">
+        <ChatKit control={control} className="chat-shell__panel" />
       </div>
     </div>
   );

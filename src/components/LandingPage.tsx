@@ -1,41 +1,12 @@
 import { useState, type FormEvent, type KeyboardEvent } from "react";
-import {
-  BellIcon,
-  BoxIcon,
-  ChartIcon,
-  EyeIcon,
-  SparkleIcon,
-  TagIcon,
-} from "./icons";
-import { suggestions, type Suggestion } from "../data/suggestions";
+import { ArrowUpIcon } from "./icons";
+import { suggestions } from "../data/suggestions";
 
 type LandingPageProps = {
-  userName?: string;
   onStartChat: (question: string) => void;
 };
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-function SuggestionIcon({ icon }: { icon: Suggestion["icon"] }) {
-  const className = "suggestion-card__icon-svg";
-  switch (icon) {
-    case "visibility":
-      return <EyeIcon className={className} />;
-    case "availability":
-      return <BoxIcon className={className} />;
-    case "pricing":
-      return <TagIcon className={className} />;
-    case "portfolio":
-      return <ChartIcon className={className} />;
-  }
-}
-
-export function LandingPage({ userName = "there", onStartChat }: LandingPageProps) {
+export function LandingPage({ onStartChat }: LandingPageProps) {
   const [query, setQuery] = useState("");
 
   const submit = () => {
@@ -57,83 +28,73 @@ export function LandingPage({ userName = "there", onStartChat }: LandingPageProp
   };
 
   return (
-    <div className="landing">
-      <div className="landing__glow landing__glow--left" aria-hidden />
-      <div className="landing__glow landing__glow--right" aria-hidden />
+    <div className="shell">
+      <div className="shell__ambient" aria-hidden>
+        <div className="shell__orb shell__orb--primary" />
+        <div className="shell__orb shell__orb--sky" />
+        <div className="shell__orb shell__orb--ice" />
+      </div>
 
-      <header className="landing__topbar">
-        <div>
-          <p className="landing__greeting">
-            {getGreeting()}, {userName} <span aria-hidden>👋</span>
-          </p>
-        </div>
-        <div className="landing__actions">
-          <button type="button" className="icon-button" aria-label="Notifications">
-            <BellIcon />
-            <span className="icon-button__badge">3</span>
-          </button>
-          <div className="avatar" aria-hidden>
-            {userName.slice(0, 2).toUpperCase()}
-          </div>
-        </div>
-      </header>
-
-      <section className="landing__hero">
-        <div className="landing__badge">
-          <SparkleIcon />
+      <nav className="nav">
+        <div className="nav__brand">
+          <span className="nav__mark" aria-hidden />
           Retail Pulse AI
         </div>
-        <h1>What would you like to understand today?</h1>
-        <p className="landing__subtitle">
-          Ask a business question and Retail Pulse AI will analyze retail signals,
-          identify performance drivers, and recommend actions across pricing,
-          availability, visibility, portfolio and sales.
-        </p>
+      </nav>
 
-        <form className="query-card" onSubmit={onSubmit}>
-          <textarea
-            className="query-card__input"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder="Ask Retail Pulse AI anything..."
-            rows={4}
-            aria-label="Your question"
-          />
-          <div className="query-card__footer">
-            <span>Get instant insights on your retail data.</span>
-            <button type="submit" className="primary-button" disabled={!query.trim()}>
-              Analyze Question
+      <main className="hero">
+        <div className="hero__intro">
+          <p className="hero__greeting">Hello Manager</p>
+          <h1>What would you like to understand today?</h1>
+          <p className="hero__lead">
+            Analyze retail signals, uncover performance drivers, and get
+            actionable recommendations across pricing, availability, visibility,
+            and portfolio.
+          </p>
+        </div>
+
+        <form className="composer" onSubmit={onSubmit}>
+          <div className="composer__surface">
+            <textarea
+              className="composer__input"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="Ask anything about your retail data..."
+              rows={1}
+              aria-label="Your question"
+            />
+            <button
+              type="submit"
+              className="composer__send"
+              disabled={!query.trim()}
+              aria-label="Send question"
+            >
+              <ArrowUpIcon />
             </button>
           </div>
+          <p className="composer__hint">
+            Press Enter to send · Shift + Enter for a new line
+          </p>
         </form>
-      </section>
 
-      <section className="landing__explore">
-        <div className="landing__explore-header">
-          <h2>Explore Retail Intelligence</h2>
-          <p>Choose a business area or start with a suggested question.</p>
-        </div>
-
-        <div className="suggestion-grid">
-          {suggestions.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="suggestion-card"
-              onClick={() => onStartChat(item.question)}
-            >
-              <span className="suggestion-card__icon">
-                <SuggestionIcon icon={item.icon} />
-              </span>
-              <span className="suggestion-card__content">
-                <strong>{item.title}</strong>
-                <span>{item.question}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
+        <section className="prompts" aria-label="Suggested questions">
+          <p className="prompts__label">Suggested questions</p>
+          <div className="prompts__grid">
+            {suggestions.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`prompt-card prompt-card--${item.id}`}
+                onClick={() => onStartChat(item.question)}
+              >
+                <span className="prompt-card__category">{item.title}</span>
+                <span className="prompt-card__text">{item.question}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </main>
     </div>
   );
 }

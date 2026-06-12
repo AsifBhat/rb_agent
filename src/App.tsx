@@ -2,9 +2,6 @@ import { useState } from "react";
 import { ChatExperience } from "./components/ChatExperience";
 import { LandingPage } from "./components/LandingPage";
 
-const userName =
-  import.meta.env.VITE_USER_NAME?.trim() || "Amit";
-
 export default function App() {
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
 
@@ -17,5 +14,5 @@ export default function App() {
     );
   }
 
-  return <LandingPage userName={userName} onStartChat={setActiveQuery} />;
+  return <LandingPage onStartChat={setActiveQuery} />;
 }
