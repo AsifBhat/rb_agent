@@ -9,6 +9,16 @@
   status = 200
 
 [[redirects]]
+  from = "/api/thread-items"
+  to = "/.netlify/functions/thread-items"
+  status = 200
+
+[[redirects]]
+  from = "/api/visualize"
+  to = "/.netlify/functions/visualize"
+  status = 200
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
