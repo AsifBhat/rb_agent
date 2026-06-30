@@ -1,26 +1,12 @@
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import {
-  buildVisualizationFromAssistant,
+  INTELLIGENCE_SYSTEM_PROMPT,
+  buildIntelligenceFromAssistant,
   extractEmbeddedVisualization,
-  normalizeVisualization,
+  fallbackReportFromText,
+  normalizeIntelligenceReport,
 } from "./server/visualize-core.mjs";
-
-const SYSTEM_PROMPT = `You convert retail analytics answers into chart specifications.
-Return ONLY valid JSON with this shape:
-{
-  "title": "string",
-  "subtitle": "string optional",
-  "type": "bar" | "line" | "area" | "pie",
-  "data": [{ "name": "string", "value": number, "secondary": number optional }],
-  "insight": "one sentence executive insight",
-  "metrics": [{ "label": "string", "value": "string", "tone": "up"|"down"|"neutral" optional }]
-}
-Rules:
-- Use 3 to 8 data points when possible.
-- Prefer bar charts for comparisons, line/area for trends, pie for share breakdowns.
-- Extract real numbers from the assistant answer when available; otherwise infer plausible retail demo values aligned with the narrative.
-- If the content is not visualizable, return {"visualization": null}.`;
 
 function readBody(req: import("http").IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -29,6 +15,25 @@ function readBody(req: import("http").IncomingMessage): Promise<string> {
     req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     req.on("error", reject);
   });
+}
+
+function parseCookies(header = "") {
+  return Object.fromEntries(
+    header
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const index = part.indexOf("=");
+        if (index === -1) return [part, ""];
+        return [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
+      }),
+  );
+}
+
+function sessionCookieHeader(userId: string) {
+  const maxAge = 60 * 60 * 24 * 30;
+  return `chatkit_session_id=${encodeURIComponent(userId)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`;
 }
 
 function chatkitDevPlugin(env: Record<string, string>): Plugin {
@@ -56,7 +61,10 @@ function chatkitDevPlugin(env: Record<string, string>): Plugin {
           return;
         }
 
-        const userId = crypto.randomUUID();
+        const cookies = parseCookies(req.headers.cookie);
+        const existingUser = cookies.chatkit_session_id;
+        const userId = existingUser || crypto.randomUUID();
+        const setCookie = !existingUser;
 
         try {
           const upstream = await fetch(`${apiBase}/v1/chatkit/sessions`, {
@@ -75,11 +83,63 @@ function chatkitDevPlugin(env: Record<string, string>): Plugin {
           const payload = await upstream.json();
           res.statusCode = upstream.status;
           res.setHeader("Content-Type", "application/json");
+          if (setCookie) {
+            res.setHeader("Set-Cookie", sessionCookieHeader(userId));
+          }
           res.end(
             JSON.stringify(
               payload.client_secret ? { client_secret: payload.client_secret } : payload,
             ),
           );
+        } catch (error) {
+          res.statusCode = 502;
+          res.end(
+            JSON.stringify({
+              error: error instanceof Error ? error.message : "Request failed",
+            }),
+          );
+        }
+      });
+
+      server.middlewares.use("/api/list-threads", async (req, res) => {
+        if (req.method !== "GET") {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: "Method not allowed" }));
+          return;
+        }
+
+        if (!apiKey) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: "Missing OPENAI_API_KEY" }));
+          return;
+        }
+
+        const cookies = parseCookies(req.headers.cookie);
+        const userId = cookies.chatkit_session_id;
+        if (!userId) {
+          res.statusCode = 401;
+          res.end(JSON.stringify({ error: "Missing session user. Refresh and try again." }));
+          return;
+        }
+
+        const url = new URL(req.url ?? "", "http://localhost");
+        const limit = url.searchParams.get("limit") ?? "5";
+        const order = url.searchParams.get("order") ?? "desc";
+
+        try {
+          const upstream = await fetch(
+            `${apiBase}/v1/chatkit/threads?user=${encodeURIComponent(userId)}&limit=${limit}&order=${order}`,
+            {
+              headers: {
+                Authorization: `Bearer ${apiKey}`,
+                "OpenAI-Beta": "chatkit_beta=v1",
+              },
+            },
+          );
+          const payload = await upstream.json();
+          res.statusCode = upstream.status;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify(payload));
         } catch (error) {
           res.statusCode = 502;
           res.end(
@@ -162,7 +222,7 @@ function chatkitDevPlugin(env: Record<string, string>): Plugin {
         if (!assistantText) {
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/json");
-          res.end(JSON.stringify({ visualization: null }));
+          res.end(JSON.stringify({ report: null }));
           return;
         }
 
@@ -170,7 +230,11 @@ function chatkitDevPlugin(env: Record<string, string>): Plugin {
         if (embedded) {
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/json");
-          res.end(JSON.stringify({ visualization: normalizeVisualization(embedded) }));
+          res.end(
+            JSON.stringify({
+              report: normalizeIntelligenceReport(embedded, assistantText),
+            }),
+          );
           return;
         }
 
@@ -186,7 +250,7 @@ function chatkitDevPlugin(env: Record<string, string>): Plugin {
               input: [
                 {
                   role: "system",
-                  content: [{ type: "input_text", text: SYSTEM_PROMPT }],
+                  content: [{ type: "input_text", text: INTELLIGENCE_SYSTEM_PROMPT }],
                 },
                 {
                   role: "user",
@@ -210,7 +274,7 @@ function chatkitDevPlugin(env: Record<string, string>): Plugin {
             return;
           }
 
-          const visualization = buildVisualizationFromAssistant(
+          const report = buildIntelligenceFromAssistant(
             userQuery,
             assistantText,
             payload,
@@ -218,11 +282,12 @@ function chatkitDevPlugin(env: Record<string, string>): Plugin {
 
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/json");
-          res.end(JSON.stringify({ visualization }));
+          res.end(JSON.stringify({ report }));
         } catch (error) {
           res.statusCode = 502;
           res.end(
             JSON.stringify({
+              report: fallbackReportFromText(assistantText, userQuery),
               error: error instanceof Error ? error.message : "Request failed",
             }),
           );
@@ -236,6 +301,6 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   return {
     plugins: [react(), chatkitDevPlugin(env)],
-    server: { port: 5173 },
+    server: { port: 5173, strictPort: true },
   };
 });

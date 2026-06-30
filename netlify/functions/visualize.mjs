@@ -1,7 +1,9 @@
 import {
-  buildVisualizationFromAssistant,
+  INTELLIGENCE_SYSTEM_PROMPT,
+  buildIntelligenceFromAssistant,
   extractEmbeddedVisualization,
-  normalizeVisualization,
+  fallbackReportFromText,
+  normalizeIntelligenceReport,
 } from "../../server/visualize-core.mjs";
 
 export async function handler(event) {
@@ -19,12 +21,14 @@ export async function handler(event) {
   const assistantText = String(body.assistantText ?? "").trim();
 
   if (!assistantText) {
-    return json({ visualization: null });
+    return json({ report: null });
   }
 
   const embedded = extractEmbeddedVisualization(assistantText);
   if (embedded) {
-    return json({ visualization: normalizeVisualization(embedded) });
+    return json({
+      report: normalizeIntelligenceReport(embedded, assistantText),
+    });
   }
 
   const apiBase = process.env.CHATKIT_API_BASE || "https://api.openai.com";
@@ -44,21 +48,7 @@ export async function handler(event) {
             content: [
               {
                 type: "input_text",
-                text: `You convert retail analytics answers into chart specifications.
-Return ONLY valid JSON with this shape:
-{
-  "title": "string",
-  "subtitle": "string optional",
-  "type": "bar" | "line" | "area" | "pie",
-  "data": [{ "name": "string", "value": number, "secondary": number optional }],
-  "insight": "one sentence executive insight",
-  "metrics": [{ "label": "string", "value": "string", "tone": "up"|"down"|"neutral" optional }]
-}
-Rules:
-- Use 3 to 8 data points when possible.
-- Prefer bar charts for comparisons, line/area for trends, pie for share breakdowns.
-- Extract real numbers from the assistant answer when available; otherwise infer plausible retail demo values aligned with the narrative.
-- If the content is not visualizable, return {"visualization": null}.`,
+                text: INTELLIGENCE_SYSTEM_PROMPT,
               },
             ],
           },
@@ -88,16 +78,15 @@ Rules:
       return json({ error: message }, upstream.status);
     }
 
-    const visualization = buildVisualizationFromAssistant(
-      userQuery,
-      assistantText,
-      payload,
-    );
+    const report = buildIntelligenceFromAssistant(userQuery, assistantText, payload);
 
-    return json({ visualization });
+    return json({ report });
   } catch (error) {
     return json(
-      { error: error instanceof Error ? error.message : "Request failed" },
+      {
+        report: fallbackReportFromText(assistantText, userQuery),
+        error: error instanceof Error ? error.message : "Request failed",
+      },
       502,
     );
   }

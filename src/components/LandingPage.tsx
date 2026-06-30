@@ -27,7 +27,7 @@ export function LandingPage({ onStartChat }: LandingPageProps) {
   };
 
   return (
-    <div className="shell">
+    <div className="shell shell--light shell--landing">
       <div className="shell__grid" aria-hidden />
       <div className="shell__ambient" aria-hidden>
         <div className="shell__orb shell__orb--primary" />

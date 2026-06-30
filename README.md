@@ -42,13 +42,18 @@ npm run dev
 
 ## Domain allowlist (required)
 
-Before ChatKit loads in production, add your site domain to OpenAI:
+ChatKit only runs on domains registered in your OpenAI org. Add every origin you use:
 
 https://platform.openai.com/settings/organization/security/domain-allowlist
 
-Add your Netlify domain (e.g. `your-site.netlify.app`) and any custom domain you use.
+**Production:** your Netlify URL (e.g. `your-site.netlify.app`) and any custom domain.
 
-For local dev, add `localhost:5173`.
+**Local dev:** add the exact host and port Vite prints when you run `npm run dev`, for example:
+
+- `localhost:5173` (default — this project uses `strictPort`, so dev always runs on 5173)
+- If you see a warning for `localhost:5174`, either add `localhost:5174` to the allowlist or stop the other process using port 5173 and restart `npm run dev`.
+
+The console message *"Domain verification skipped"* means ChatKit detected an unlisted origin. It may still work locally, but production will block until the domain is allowlisted.
 
 ## Embed in your app
 
